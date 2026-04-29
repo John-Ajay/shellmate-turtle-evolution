@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shellmates — Shell Evolution Engine</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1151,9 +1152,20 @@ function showToast(msg) {
 }
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
-function loginWithX() {
-  // Simulated OAuth - in production would redirect to Twitter OAuth
-  showToast('X OAuth not configured — try Demo mode');
+// ─── SUPABASE ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://mzlkepupbpxurkbalnqa.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16bGtlcHVwYnB4dXJrYmFsbnFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTQwNDMsImV4cCI6MjA5MzAzMDA0M30.T8LJ4-ryMOSUiuUidgebHKXfFOImVK7eGARkHmhdnY0';
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+async function loginWithX() {
+  const { error } = await _supabase.auth.signInWithOAuth({
+    provider: 'twitter',
+    options: { redirectTo: window.location.href }
+  });
+  if (error) {
+    console.error(error);
+    showToast('Login failed: ' + error.message);
+  }
 }
 
 function loginDemo() {
@@ -1461,7 +1473,7 @@ function turtleTapped() {
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-function init() {
+async function init() {
   spawnParticles();
 
   // Draw login turtle
@@ -1471,7 +1483,32 @@ function init() {
     applyTurtleVisuals(loginEl, demoState, false);
   }
 
-  // Restore saved state
+  // Check Supabase OAuth session (handles redirect back from X)
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session) {
+    const meta = session.user.user_metadata;
+    const username = meta.user_name || meta.preferred_username || meta.name || 'explorer';
+    const userId = session.user.id;
+
+    // Load existing save or create new one
+    const saved = loadState();
+    if (saved && saved.user && saved.user.id === userId) {
+      state = saved;
+    } else {
+      state = defaultState(username);
+      state.user.username = username;
+      state.user.id = userId;
+      saveState();
+      showScreen('onboarding');
+      setupOnboarding();
+      return;
+    }
+    showScreen('dashboard');
+    initDashboard();
+    return;
+  }
+
+  // Restore saved demo state
   const saved = loadState();
   if (saved) {
     state = saved;
