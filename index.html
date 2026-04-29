@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shellmates — Shell Evolution Engine</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -789,17 +788,31 @@
       <div class="login-tagline">Shell Evolution Engine · Digital Pet System</div>
       <div class="login-card">
         <h2>Welcome, Captain</h2>
-        <p>Your turtle awaits. It will grow, change, and evolve based on how you care for it. Train it. Feed it. Explore with it. Ignore it at your peril.</p>
-        <div class="privacy-notice">
-          This app does not track, post, or interact with your X account activity.
+        <p>Your turtle awaits. Create an account or sign in to continue your journey.</p>
+
+        <!-- Tab switcher -->
+        <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;background:rgba(255,255,255,0.05);border-radius:10px;padding:0.25rem">
+          <button id="tab-signin" onclick="switchTab('signin')" style="flex:1;padding:0.5rem;border:none;border-radius:8px;background:var(--teal-bright);color:var(--ocean-deep);font-family:var(--font-display);font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.2s">Sign In</button>
+          <button id="tab-signup" onclick="switchTab('signup')" style="flex:1;padding:0.5rem;border:none;border-radius:8px;background:transparent;color:var(--fog);font-family:var(--font-display);font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.2s">Sign Up</button>
         </div>
-        <button class="btn-x-login" onclick="loginWithX()">
-          <svg width="18" height="18" viewBox="0 0 1200 1227" fill="white" xmlns="http://www.w3.org/2000/svg">
-            <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.163 519.284ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.828Z"/>
-          </svg>
-          Continue with X
-        </button>
-        <button class="btn-demo" onclick="loginDemo()">Try Demo (no login)</button>
+
+        <!-- Error message -->
+        <div id="auth-error" style="display:none;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:0.6rem 1rem;font-size:0.72rem;color:#ff6b6b;margin-bottom:1rem;text-align:left"></div>
+
+        <!-- Username field -->
+        <div style="margin-bottom:0.75rem;text-align:left">
+          <label style="font-size:0.65rem;color:var(--fog);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:0.4rem">Username</label>
+          <input id="auth-username" type="text" placeholder="your_username" style="width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:10px;color:var(--pearl);font-family:var(--font-mono);font-size:0.85rem;outline:none;transition:border 0.2s" onfocus="this.style.borderColor='rgba(0,201,167,0.5)'" onblur="this.style.borderColor='var(--glass-border)'" onkeydown="if(event.key==='Enter')handleAuth()"/>
+        </div>
+
+        <!-- Password field -->
+        <div style="margin-bottom:1.25rem;text-align:left">
+          <label style="font-size:0.65rem;color:var(--fog);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:0.4rem">Password</label>
+          <input id="auth-password" type="password" placeholder="••••••••" style="width:100%;padding:0.75rem 1rem;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:10px;color:var(--pearl);font-family:var(--font-mono);font-size:0.85rem;outline:none;transition:border 0.2s" onfocus="this.style.borderColor='rgba(0,201,167,0.5)'" onblur="this.style.borderColor='var(--glass-border)'" onkeydown="if(event.key==='Enter')handleAuth()"/>
+        </div>
+
+        <button class="btn-primary" style="width:100%;margin-bottom:0.75rem" onclick="handleAuth()" id="auth-btn">Sign In</button>
+        <button class="btn-demo" onclick="loginDemo()">Try Demo (no account)</button>
       </div>
     </div>
   </div>
@@ -851,6 +864,7 @@
     <div class="header-user">
       <div class="header-avatar" id="header-avatar">?</div>
       <span id="header-username">@user</span>
+      <button onclick="logout()" style="margin-left:0.5rem;padding:0.3rem 0.75rem;background:transparent;border:1px solid rgba(255,107,107,0.3);border-radius:8px;color:rgba(255,107,107,0.7);font-family:var(--font-mono);font-size:0.65rem;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor='rgba(255,107,107,0.7)';this.style.color='#ff6b6b'" onmouseout="this.style.borderColor='rgba(255,107,107,0.3)';this.style.color='rgba(255,107,107,0.7)'">logout</button>
     </div>
   </div>
 
@@ -1152,20 +1166,96 @@ function showToast(msg) {
 }
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
-// ─── SUPABASE ─────────────────────────────────────────────────────────────────
-const SUPABASE_URL = 'https://mzlkepupbpxurkbalnqa.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16bGtlcHVwYnB4dXJrYmFsbnFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTQwNDMsImV4cCI6MjA5MzAzMDA0M30.T8LJ4-ryMOSUiuUidgebHKXfFOImVK7eGARkHmhdnY0';
-const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// ─── LOCAL AUTH ───────────────────────────────────────────────────────────────
+const USERS_KEY = 'shellmates_users_v1';
+let currentTab = 'signin';
 
-async function loginWithX() {
-  const { error } = await _supabase.auth.signInWithOAuth({
-    provider: 'twitter',
-    options: { redirectTo: window.location.href }
-  });
-  if (error) {
-    console.error(error);
-    showToast('Login failed: ' + error.message);
+function switchTab(tab) {
+  currentTab = tab;
+  const signinBtn = document.getElementById('tab-signin');
+  const signupBtn = document.getElementById('tab-signup');
+  const authBtn = document.getElementById('auth-btn');
+  document.getElementById('auth-error').style.display = 'none';
+
+  if (tab === 'signin') {
+    signinBtn.style.background = 'var(--teal-bright)';
+    signinBtn.style.color = 'var(--ocean-deep)';
+    signupBtn.style.background = 'transparent';
+    signupBtn.style.color = 'var(--fog)';
+    authBtn.textContent = 'Sign In';
+  } else {
+    signupBtn.style.background = 'var(--teal-bright)';
+    signupBtn.style.color = 'var(--ocean-deep)';
+    signinBtn.style.background = 'transparent';
+    signinBtn.style.color = 'var(--fog)';
+    authBtn.textContent = 'Create Account';
   }
+}
+
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; } catch { return {}; }
+}
+
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function handleAuth() {
+  const username = document.getElementById('auth-username').value.trim().toLowerCase();
+  const password = document.getElementById('auth-password').value;
+  document.getElementById('auth-error').style.display = 'none';
+
+  if (!username) return showAuthError('Please enter a username.');
+  if (username.length < 3) return showAuthError('Username must be at least 3 characters.');
+  if (!password) return showAuthError('Please enter a password.');
+  if (password.length < 6) return showAuthError('Password must be at least 6 characters.');
+
+  const users = getUsers();
+
+  if (currentTab === 'signup') {
+    if (users[username]) return showAuthError('Username already taken. Try signing in.');
+    // Simple hash (not cryptographic, but functional for MVP)
+    const hashed = btoa(password + username + 'shellmates_salt');
+    users[username] = { password: hashed, createdAt: Date.now() };
+    saveUsers(users);
+    // Create new turtle state
+    state = defaultState(username);
+    saveState();
+    showScreen('onboarding');
+    setupOnboarding();
+  } else {
+    if (!users[username]) return showAuthError('Account not found. Try signing up.');
+    const hashed = btoa(password + username + 'shellmates_salt');
+    if (users[username].password !== hashed) return showAuthError('Incorrect password.');
+    // Load existing state or create new
+    const saved = loadState();
+    if (saved && saved.user && saved.user.username === username) {
+      state = saved;
+      showScreen('dashboard');
+      initDashboard();
+    } else {
+      state = defaultState(username);
+      saveState();
+      showScreen('onboarding');
+      setupOnboarding();
+    }
+  }
+}
+
+function logout() {
+  if (!confirm('Log out? Your turtle will be waiting when you return.')) return;
+  state = null;
+  showScreen('login');
+  document.getElementById('auth-username').value = '';
+  document.getElementById('auth-password').value = '';
+  document.getElementById('auth-error').style.display = 'none';
+  switchTab('signin');
 }
 
 function loginDemo() {
@@ -1473,7 +1563,7 @@ function turtleTapped() {
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-async function init() {
+function init() {
   spawnParticles();
 
   // Draw login turtle
@@ -1483,34 +1573,9 @@ async function init() {
     applyTurtleVisuals(loginEl, demoState, false);
   }
 
-  // Check Supabase OAuth session (handles redirect back from X)
-  const { data: { session } } = await _supabase.auth.getSession();
-  if (session) {
-    const meta = session.user.user_metadata;
-    const username = meta.user_name || meta.preferred_username || meta.name || 'explorer';
-    const userId = session.user.id;
-
-    // Load existing save or create new one
-    const saved = loadState();
-    if (saved && saved.user && saved.user.id === userId) {
-      state = saved;
-    } else {
-      state = defaultState(username);
-      state.user.username = username;
-      state.user.id = userId;
-      saveState();
-      showScreen('onboarding');
-      setupOnboarding();
-      return;
-    }
-    showScreen('dashboard');
-    initDashboard();
-    return;
-  }
-
-  // Restore saved demo state
+  // Restore saved state (demo or logged in)
   const saved = loadState();
-  if (saved) {
+  if (saved && saved.user) {
     state = saved;
     showScreen('dashboard');
     initDashboard();
